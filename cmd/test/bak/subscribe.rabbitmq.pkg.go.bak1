@@ -1,0 +1,456 @@
+package bak
+
+import (
+	_type "boilerplate-go/internal/common/type"
+	"boilerplate-go/internal/pkg/logger"
+	"context"
+	"errors"
+	"fmt"
+	"github.com/panjf2000/ants/v2"
+	"net/http"
+	"sync"
+	"time"
+
+	amqp "github.com/rabbitmq/amqp091-go"
+)
+
+type MessageHandler func(msg *amqp.Delivery) (interface{}, error)
+
+type SubscribeOptions struct {
+	QueueName     string
+	ConsumerName  string
+	AutoAck       bool
+	Exclusive     bool
+	NoLocal       bool
+	NoWait        bool
+	Args          amqp.Table
+	WorkerCount   int // Number of concurrent workers
+	PrefetchCount int // How many messages to prefetch per worker
+}
+
+func DefaultSubscribeOptions(queueName string, consumerName string) SubscribeOptions {
+	return SubscribeOptions{
+		QueueName:     queueName,
+		ConsumerName:  consumerName,
+		AutoAck:       false,
+		Exclusive:     false,
+		NoLocal:       false,
+		NoWait:        false,
+		Args:          nil,
+		WorkerCount:   5, // Default to 5 workers
+		PrefetchCount: 1, // Default to 1 message per worker
+	}
+}
+
+type Subscriber struct {
+	connManager *ConnectionManager
+	handler     MessageHandler
+	opts        SubscribeOptions
+	ctx         context.Context
+	cancel      context.CancelFunc
+	wg          sync.WaitGroup
+	isRunning   bool
+	channels    []*amqp.Channel
+	pool        *ants.Pool
+	mu          sync.RWMutex
+}
+
+func NewSubscriber(ctx context.Context, connManager *ConnectionManager, handler MessageHandler, opts SubscribeOptions) (*Subscriber, error) {
+	ctx, cancel := context.WithCancel(ctx)
+
+	pool, err := ants.NewPool(opts.WorkerCount, ants.WithOptions(ants.Options{
+		ExpiryDuration:   time.Hour,
+		PreAlloc:         true,
+		MaxBlockingTasks: opts.WorkerCount * 2,
+		PanicHandler: func(i interface{}) {
+			logger.Error.Printf("Worker panic: %v\n", i)
+		},
+	}))
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("failed to create worker pool: %w", err)
+	}
+
+	sub := &Subscriber{
+		connManager: connManager,
+		handler:     handler,
+		opts:        opts,
+		ctx:         ctx,
+		cancel:      cancel,
+		channels:    make([]*amqp.Channel, opts.WorkerCount),
+		pool:        pool,
+	}
+
+	return sub, nil
+}
+
+func (s *Subscriber) setupChannel(workerID int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.channels[workerID] != nil {
+		return nil
+	}
+
+	conn := s.connManager.GetConnection()
+	if conn == nil {
+		return fmt.Errorf("no connection available")
+	}
+
+	ch, err := conn.Channel()
+	if err != nil {
+		return fmt.Errorf("failed to create channel: %w", err)
+	}
+
+	err = ch.Qos(
+		s.opts.PrefetchCount,
+		0,
+		false,
+	)
+	if err != nil {
+		ch.Close()
+		return fmt.Errorf("failed to set QoS: %w", err)
+	}
+
+	s.channels[workerID] = ch
+	go s.channelMonitor(workerID)
+
+	return nil
+}
+
+func (s *Subscriber) channelMonitor(workerID int) {
+	s.mu.RLock()
+	ch := s.channels[workerID]
+	s.mu.RUnlock()
+
+	if ch == nil {
+		return
+	}
+
+	chErr := make(chan *amqp.Error)
+	ch.NotifyClose(chErr)
+
+	for {
+		select {
+		case err := <-chErr:
+			if err != nil {
+				s.mu.Lock()
+				s.channels[workerID] = nil
+				s.mu.Unlock()
+
+				logger.Error.Printf("Worker %d channel closed: %v. Will recreate on next attempt.\n",
+					workerID, err)
+				return
+			}
+		case <-s.ctx.Done():
+			return
+		}
+	}
+}
+
+func (s *Subscriber) Start() error {
+	s.mu.Lock()
+	if s.isRunning {
+		s.mu.Unlock()
+		return fmt.Errorf("subscriber is already running")
+	}
+	s.isRunning = true
+	s.mu.Unlock()
+
+	for i := 0; i < s.opts.WorkerCount; i++ {
+		s.wg.Add(1)
+		if err := s.pool.Submit(func() {
+			s.runWorker(i)
+		}); err != nil {
+			logger.Error.Printf("Failed to submit worker %d: %v\n", i, err)
+			s.wg.Done()
+		} else {
+			logger.Info.Printf("Started worker %s [%d]\n", s.opts.ConsumerName, i)
+		}
+	}
+
+	return nil
+}
+
+func (s *Subscriber) runWorker(workerID int) {
+	defer s.wg.Done()
+
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		default:
+			if err := s.consume(workerID); err != nil {
+				logger.Error.Printf("Worker %d consume error: %v\n", workerID, err)
+				time.Sleep(time.Second * 2) // Wait before retry
+			}
+		}
+	}
+}
+
+func (s *Subscriber) consume(workerID int) error {
+	if err := s.setupChannel(workerID); err != nil {
+		return err
+	}
+
+	s.mu.RLock()
+	ch := s.channels[workerID]
+	s.mu.RUnlock()
+
+	if ch == nil {
+		return fmt.Errorf("channel not available")
+	}
+
+	consumerName := fmt.Sprintf("%s-%d-%d", s.opts.ConsumerName, workerID, time.Now().Unix())
+	msgs, err := ch.Consume(
+		s.opts.QueueName,
+		consumerName,
+		s.opts.AutoAck,
+		s.opts.Exclusive,
+		s.opts.NoLocal,
+		s.opts.NoWait,
+		s.opts.Args,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to start consuming %d: %w", workerID, err)
+	}
+
+	for msg := range msgs {
+		select {
+		case <-s.ctx.Done():
+			logger.Info.Printf("Worker %d stopping\n", workerID)
+			return nil
+		default:
+			if err := s.processMessage(workerID, &msg); err != nil {
+				logger.Error.Printf("Worker %d failed to process message: %v\n", workerID, err)
+			}
+		}
+	}
+
+	return fmt.Errorf("consume channel closed")
+}
+
+func (s *Subscriber) processMessage(workerID int, msg *amqp.Delivery) error {
+	response, err := s.handler(msg)
+
+	if err != nil {
+		if msg.ReplyTo != "" && msg.CorrelationId != "" {
+			payload, er := NewMessage(&_type.Response{
+				Code:    http.StatusInternalServerError,
+				Message: "Error when handler message",
+				Error:   err,
+			})
+			if er != nil {
+				return fmt.Errorf("failed to create error payload: %w", err)
+			}
+			if sendErr := s.sendReply(workerID, msg, payload); sendErr != nil {
+				return fmt.Errorf("failed to send error reply: %w", sendErr)
+			}
+		}
+		if err = msg.Reject(true); err != nil {
+			return fmt.Errorf("failed to reject message: %w", err)
+		}
+		return fmt.Errorf("handler error: %w", err)
+	} else if msg.ReplyTo != "" && msg.CorrelationId != "" {
+		payload, err := NewMessage(response)
+		if err != nil {
+			return fmt.Errorf("failed to create response payload: %w", err)
+		}
+		if sendErr := s.sendReply(workerID, msg, payload); sendErr != nil {
+			return fmt.Errorf("failed to send reply: %w", sendErr)
+		}
+	}
+
+	if !s.opts.AutoAck {
+		if err := msg.Ack(false); err != nil {
+			return fmt.Errorf("failed to acknowledge message: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (s *Subscriber) sendReply(workerID int, delivery *amqp.Delivery, msg *Message) error {
+	s.mu.RLock()
+	ch := s.channels[workerID]
+	s.mu.RUnlock()
+
+	if ch == nil {
+		return fmt.Errorf("channel not available")
+	}
+
+	payload := msg.GenerateRPCReplyPayload(delivery.CorrelationId)
+
+	err := ch.Publish(
+		"",
+		delivery.ReplyTo,
+		false,
+		false,
+		*payload)
+	if err != nil {
+		return fmt.Errorf("failed to send reply: %w", err)
+	}
+	return nil
+}
+
+func (s *Subscriber) Stop() error {
+	s.mu.Lock()
+	if !s.isRunning {
+		s.mu.Unlock()
+		return nil
+	}
+	s.isRunning = false
+	s.mu.Unlock()
+
+	s.cancel()
+
+	done := make(chan struct{})
+	go func() {
+		s.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(time.Second * 30):
+		return fmt.Errorf("timeout waiting for workers to stop")
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for i, ch := range s.channels {
+		if ch != nil {
+			if err := ch.Close(); err != nil {
+				logger.Error.Printf("Error closing channel for worker %d: %v\n", i, err)
+			}
+			s.channels[i] = nil
+		}
+	}
+
+	s.pool.Release()
+	return nil
+}
+
+// GetRunningWorkers returns the number of currently running workers
+func (s *Subscriber) GetRunningWorkers() int {
+	return s.pool.Running()
+}
+
+// GetWorkerCapacity returns the maximum number of workers
+func (s *Subscriber) GetWorkerCapacity() int {
+	return s.pool.Cap()
+}
+
+// IsHealthy returns true if the subscriber is running and has active workers
+func (s *Subscriber) IsHealthy() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if !s.isRunning {
+		return false
+	}
+
+	// Consider healthy if at least one worker is running
+	return s.pool.Running() > 0
+}
+
+func (p *Publisher) Publish() error {
+	conn := p.connManager.GetConnection()
+	if conn == nil {
+		return errors.New("no connection available")
+	}
+
+	ch, err := conn.Channel()
+	if err != nil {
+		return fmt.Errorf("failed to open channel: %w", err)
+	}
+
+	defer ch.Close()
+
+	//if err := ch.Confirm(false); err != nil {
+	//	return fmt.Errorf("failed to enable publisher confirms: %w", err)
+	//}
+
+	data := map[string]interface{}{
+		"key": "value",
+	}
+
+	message, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	_, err = ch.QueueDeclare(
+		"queueName",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	err = ch.Publish(
+		"",
+		"queueName",
+		false,
+		false,
+		amqp.Publishing{
+			ContentType: "application/json",
+			Body:        message,
+		})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *Publisher) Subscribe() error {
+	conn := p.connManager.GetConnection()
+	if conn == nil {
+		return errors.New("no connection available")
+	}
+
+	ch, err := conn.Channel()
+	if err != nil {
+		return fmt.Errorf("failed to open channel: %w", err)
+	}
+
+	defer ch.Close()
+
+	_, err = ch.QueueDeclare(
+		"queueName",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	msgs, err := ch.Consume(
+		"queueName",
+		"",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	for msg := range msgs {
+		fmt.Println(string(msg.Body))
+	}
+
+	return nil
+}
