@@ -1,0 +1,824 @@
+{
+	"info": {
+		"_postman_id": "0a38be46-8e26-445b-bfad-1400b0bd051d",
+		"name": "boilerplate",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "13554772"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "LOGIN",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const body = pm.response.json()",
+									"    const token = body.token",
+									"    pm.expect(token).to.be.a(\"string\")",
+									"",
+									"    pm.collectionVariables.set(\"TOKEN\", token)    ",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "localhost:8001/api/auth/login",
+							"host": [
+								"localhost"
+							],
+							"port": "8001",
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "LOGIN",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "localhost:8001/api/auth/login",
+									"host": [
+										"localhost"
+									],
+									"port": "8001",
+									"path": [
+										"api",
+										"auth",
+										"login"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Access-Control-Allow-Credentials",
+									"value": "true"
+								},
+								{
+									"key": "Access-Control-Allow-Headers",
+									"value": "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Session, Authorization, accept, origin, Cache-Control, X-Requested-With"
+								},
+								{
+									"key": "Access-Control-Allow-Methods",
+									"value": "POST, OPTIONS, GET, PUT, DELETE"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Date",
+									"value": "Fri, 17 Jan 2025 09:07:48 GMT"
+								},
+								{
+									"key": "Content-Length",
+									"value": "377"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"claims\": {\n        \"exp\": 1737104928,\n        \"iat\": 1737104868,\n        \"password\": \"password\",\n        \"username\": \"username\"\n    },\n    \"expired\": \"2025-01-17T16:08:48.826695+07:00\",\n    \"password\": \"password\",\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MzcxMDQ5MjgsImlhdCI6MTczNzEwNDg2OCwicGFzc3dvcmQiOiJwYXNzd29yZCIsInVzZXJuYW1lIjoidXNlcm5hbWUifQ.6ff29_dmmUnL-A2sdYutWFP_L1kTrzNU0I9ik2IeIrI\",\n    \"username\": \"username\"\n}"
+						}
+					]
+				},
+				{
+					"name": "DATA",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{TOKEN}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "localhost:8001/api/auth/data",
+							"host": [
+								"localhost"
+							],
+							"port": "8001",
+							"path": [
+								"api",
+								"auth",
+								"data"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "DATA",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "localhost:8001/api/auth/data",
+									"host": [
+										"localhost"
+									],
+									"port": "8001",
+									"path": [
+										"api",
+										"auth",
+										"data"
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Access-Control-Allow-Credentials",
+									"value": "true"
+								},
+								{
+									"key": "Access-Control-Allow-Headers",
+									"value": "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Session, Authorization, accept, origin, Cache-Control, X-Requested-With"
+								},
+								{
+									"key": "Access-Control-Allow-Methods",
+									"value": "POST, OPTIONS, GET, PUT, DELETE"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Date",
+									"value": "Fri, 17 Jan 2025 09:09:07 GMT"
+								},
+								{
+									"key": "Content-Length",
+									"value": "250"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": null,\n    \"message\": \"invalid token\",\n    \"debug\": {\n        \"requestId\": \"2cdc7e5d-10f2-41da-a1e1-50141a1ab58d\",\n        \"version\": \"1.0.0\",\n        \"error\": \"Token is expired\",\n        \"startTime\": \"2025-01-17T16:09:07.34475+07:00\",\n        \"endTime\": \"2025-01-17T16:09:07.344853+07:00\",\n        \"runtimeMs\": 0\n    }\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Encrypt",
+			"item": [
+				{
+					"name": "POST",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-tenant",
+								"value": "tenant1",
+								"type": "text"
+							},
+							{
+								"key": "x-time",
+								"value": "1736705521",
+								"type": "text"
+							},
+							{
+								"key": "x-encrypt",
+								"value": "9f29c5d674df48959444515acd080734ceb7600eb257bda9bfdd42d09e280077",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"data\": \"7FzrnIyLN9mWSgWVkj86PVZpVGNWfQBhr/Xw1cc/gb3UPTiKfP8PhWp/HpEJNdfgJ44RvuZryiGqUkl+D8FFICn539Zeb7PgD0B8cepn39c=\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8003/post",
+							"host": [
+								"localhost"
+							],
+							"port": "8003",
+							"path": [
+								"post"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "POST",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "x-tenant",
+										"value": "tenant1",
+										"type": "text"
+									},
+									{
+										"key": "x-time",
+										"value": "1736705521",
+										"type": "text"
+									},
+									{
+										"key": "x-encrypt",
+										"value": "9f29c5d674df48959444515acd080734ceb7600eb257bda9bfdd42d09e280077",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"data\": \"7FzrnIyLN9mWSgWVkj86PVZpVGNWfQBhr/Xw1cc/gb3UPTiKfP8PhWp/HpEJNdfgJ44RvuZryiGqUkl+D8FFICn539Zeb7PgD0B8cepn39c=\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "localhost:8003/post",
+									"host": [
+										"localhost"
+									],
+									"port": "8003",
+									"path": [
+										"post"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Access-Control-Allow-Credentials",
+									"value": "true"
+								},
+								{
+									"key": "Access-Control-Allow-Headers",
+									"value": "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Session, Authorization, accept, origin, Cache-Control, X-Requested-With"
+								},
+								{
+									"key": "Access-Control-Allow-Methods",
+									"value": "POST, OPTIONS, GET, PUT, DELETE"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Date",
+									"value": "Fri, 17 Jan 2025 09:25:57 GMT"
+								},
+								{
+									"key": "Content-Length",
+									"value": "266"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"body\": {\n        \"group_id\": \"123a\",\n        \"level\": \"admin\",\n        \"tenant_id\": \"tenant\",\n        \"userid\": 1\n    },\n    \"message\": \"Hello World\",\n    \"payload\": {\n        \"level\": \"admin\",\n        \"group_id\": \"123a\",\n        \"userid\": 1,\n        \"tenant_id\": \"tenant\"\n    },\n    \"payload2\": {\n        \"level\": \"admin\",\n        \"group_id\": \"123a\",\n        \"userid\": 1,\n        \"tenant_id\": \"tenant\",\n        \"asd\": \"\"\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "ENC",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "localhost:8003/encrypt",
+							"host": [
+								"localhost"
+							],
+							"port": "8003",
+							"path": [
+								"encrypt"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "ENC",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "localhost:8003/encrypt",
+									"host": [
+										"localhost"
+									],
+									"port": "8003",
+									"path": [
+										"encrypt"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Access-Control-Allow-Credentials",
+									"value": "true"
+								},
+								{
+									"key": "Access-Control-Allow-Headers",
+									"value": "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Session, Authorization, accept, origin, Cache-Control, X-Requested-With"
+								},
+								{
+									"key": "Access-Control-Allow-Methods",
+									"value": "POST, OPTIONS, GET, PUT, DELETE"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Date",
+									"value": "Fri, 17 Jan 2025 09:25:41 GMT"
+								},
+								{
+									"key": "Content-Length",
+									"value": "242"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": \"7FzrnIyLN9mWSgWVkj86PVZpVGNWfQBhr/Xw1cc/gb3UPTiKfP8PhWp/HpEJNdfgJ44RvuZryiGqUkl+D8FFICn539Zeb7PgD0B8cepn39c=\",\n    \"decrypted\": \"{\\\"group_id\\\":\\\"123a\\\",\\\"level\\\":\\\"admin\\\",\\\"tenant_id\\\":\\\"tenant\\\",\\\"userid\\\":1}\",\n    \"message\": \"Data encrypted\"\n}"
+						}
+					]
+				},
+				{
+					"name": "LOGIN",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const body = pm.response.json()",
+									"    const token = body.token",
+									"    pm.expect(token).to.be.a(\"string\")",
+									"",
+									"    pm.collectionVariables.set(\"TOKEN\", token)    ",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "x-tenant",
+								"value": "tenant1",
+								"type": "text"
+							},
+							{
+								"key": "x-time",
+								"value": "1736705521",
+								"type": "text"
+							},
+							{
+								"key": "x-encrypt",
+								"value": "9f29c5d674df48959444515acd080734ceb7600eb257bda9bfdd42d09e280077",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"data\": \"B2HXj15Kg5T4yX6Ey/pyJuZZY+5zZagfQ7lGHDRZvMDboX3wyZp3uEY5RKB7ztko\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8003/api/auth/login-encrypt",
+							"host": [
+								"localhost"
+							],
+							"port": "8003",
+							"path": [
+								"api",
+								"auth",
+								"login-encrypt"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "LOGIN",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "x-tenant",
+										"value": "tenant1",
+										"type": "text"
+									},
+									{
+										"key": "x-time",
+										"value": "1736705521",
+										"type": "text"
+									},
+									{
+										"key": "x-encrypt",
+										"value": "9f29c5d674df48959444515acd080734ceb7600eb257bda9bfdd42d09e280077",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"data\": \"B2HXj15Kg5T4yX6Ey/pyJuZZY+5zZagfQ7lGHDRZvMDboX3wyZp3uEY5RKB7ztko\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "localhost:8003/api/auth/login-encrypt",
+									"host": [
+										"localhost"
+									],
+									"port": "8003",
+									"path": [
+										"api",
+										"auth",
+										"login-encrypt"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Access-Control-Allow-Credentials",
+									"value": "true"
+								},
+								{
+									"key": "Access-Control-Allow-Headers",
+									"value": "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Session, Authorization, accept, origin, Cache-Control, X-Requested-With"
+								},
+								{
+									"key": "Access-Control-Allow-Methods",
+									"value": "POST, OPTIONS, GET, PUT, DELETE"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Date",
+									"value": "Fri, 17 Jan 2025 09:43:56 GMT"
+								},
+								{
+									"key": "Content-Length",
+									"value": "377"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"claims\": {\n        \"exp\": 1737107096,\n        \"iat\": 1737107036,\n        \"password\": \"password\",\n        \"username\": \"username\"\n    },\n    \"expired\": \"2025-01-17T16:44:56.187263+07:00\",\n    \"password\": \"password\",\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MzcxMDcwOTYsImlhdCI6MTczNzEwNzAzNiwicGFzc3dvcmQiOiJwYXNzd29yZCIsInVzZXJuYW1lIjoidXNlcm5hbWUifQ.VGcB6CcXq2enttQzwe8w5youbR8lsUAiPKzWsnPAv2U\",\n    \"username\": \"username\"\n}"
+						}
+					]
+				},
+				{
+					"name": "ENC SAMPLE PAYLOAD DATA",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-tenant",
+								"value": "tenant1",
+								"type": "text"
+							},
+							{
+								"key": "x-time",
+								"value": "1736705521",
+								"type": "text"
+							},
+							{
+								"key": "x-encrypt",
+								"value": "9f29c5d674df48959444515acd080734ceb7600eb257bda9bfdd42d09e280077",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "localhost:8003/api/auth/sample-data-login-encrypt",
+							"host": [
+								"localhost"
+							],
+							"port": "8003",
+							"path": [
+								"api",
+								"auth",
+								"sample-data-login-encrypt"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "ENC SAMPLE PAYLOAD DATA",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "x-tenant",
+										"value": "tenant1",
+										"type": "text"
+									},
+									{
+										"key": "x-time",
+										"value": "1736705521",
+										"type": "text"
+									},
+									{
+										"key": "x-encrypt",
+										"value": "9f29c5d674df48959444515acd080734ceb7600eb257bda9bfdd42d09e280077",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "localhost:8003/api/auth/sample-data-login-encrypt",
+									"host": [
+										"localhost"
+									],
+									"port": "8003",
+									"path": [
+										"api",
+										"auth",
+										"sample-data-login-encrypt"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Access-Control-Allow-Credentials",
+									"value": "true"
+								},
+								{
+									"key": "Access-Control-Allow-Headers",
+									"value": "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Session, Authorization, accept, origin, Cache-Control, X-Requested-With"
+								},
+								{
+									"key": "Access-Control-Allow-Methods",
+									"value": "POST, OPTIONS, GET, PUT, DELETE"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Date",
+									"value": "Fri, 17 Jan 2025 09:40:59 GMT"
+								},
+								{
+									"key": "Content-Length",
+									"value": "95"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": \"B2HXj15Kg5T4yX6Ey/pyJuZZY+5zZagfQ7lGHDRZvMDboX3wyZp3uEY5RKB7ztko\",\n    \"message\": \"success\"\n}"
+						}
+					]
+				},
+				{
+					"name": "GET DATA",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{TOKEN}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-tenant",
+								"value": "tenant1",
+								"type": "text"
+							},
+							{
+								"key": "x-time",
+								"value": "1736705521",
+								"type": "text"
+							},
+							{
+								"key": "x-encrypt",
+								"value": "9f29c5d674df48959444515acd080734ceb7600eb257bda9bfdd42d09e280077",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "localhost:8003/api/auth/data",
+							"host": [
+								"localhost"
+							],
+							"port": "8003",
+							"path": [
+								"api",
+								"auth",
+								"data"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "GET DATA",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "x-tenant",
+										"value": "tenant1",
+										"type": "text"
+									},
+									{
+										"key": "x-time",
+										"value": "1736705521",
+										"type": "text"
+									},
+									{
+										"key": "x-encrypt",
+										"value": "9f29c5d674df48959444515acd080734ceb7600eb257bda9bfdd42d09e280077",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "localhost:8003/api/auth/data",
+									"host": [
+										"localhost"
+									],
+									"port": "8003",
+									"path": [
+										"api",
+										"auth",
+										"data"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Access-Control-Allow-Credentials",
+									"value": "true"
+								},
+								{
+									"key": "Access-Control-Allow-Headers",
+									"value": "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Session, Authorization, accept, origin, Cache-Control, X-Requested-With"
+								},
+								{
+									"key": "Access-Control-Allow-Methods",
+									"value": "POST, OPTIONS, GET, PUT, DELETE"
+								},
+								{
+									"key": "Access-Control-Allow-Origin",
+									"value": "*"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Date",
+									"value": "Fri, 17 Jan 2025 09:44:04 GMT"
+								},
+								{
+									"key": "Content-Length",
+									"value": "108"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": {\n        \"exp\": 1737107096,\n        \"iat\": 1737107036,\n        \"password\": \"password\",\n        \"username\": \"username\"\n    },\n    \"message\": \"success\"\n}"
+						}
+					]
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "TOKEN",
+			"value": "",
+			"type": "default"
+		}
+	]
+}
