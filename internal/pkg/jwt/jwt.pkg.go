@@ -1,7 +1,6 @@
 package jwt
 
 import (
-	"boilerplate-go/internal/pkg/helper"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -77,10 +76,5 @@ func (a *Auth) ValidateToken(jwtToken string) (map[string]interface{}, error) {
 		return nil, jwt.ErrInvalidKey
 	}
 
-	var payload map[string]interface{}
-	if err := helper.JSONToStruct[map[string]interface{}](tokenData, &payload); err != nil {
-		return nil, err
-	}
-
-	return payload, nil
+	return tokenData, nil
 }
