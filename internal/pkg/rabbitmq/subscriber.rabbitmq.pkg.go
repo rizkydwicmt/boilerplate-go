@@ -33,8 +33,8 @@ type SubscribeOptions struct {
 	IsRPC         bool
 }
 
-func DefaultSubscribeOptions(queueName string) *SubscribeOptions {
-	return &SubscribeOptions{
+func DefaultSubscribeOptions(queueName string, isRPC bool) *SubscribeOptions {
+	opts := &SubscribeOptions{
 		QueueOpts:     nil,
 		QueueName:     queueName,
 		ConsumerName:  queueName,
@@ -48,6 +48,13 @@ func DefaultSubscribeOptions(queueName string) *SubscribeOptions {
 		MessageBuffer: 100,
 		IsRPC:         false,
 	}
+
+	if isRPC {
+		opts.WorkerCount = 1
+		opts.PrefetchCount = 1
+	}
+
+	return opts
 }
 
 type Subscriber struct {

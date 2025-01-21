@@ -49,7 +49,7 @@ func (s *Service) SamplePublishMessageRabbit(i int) error {
 }
 
 func (s *Service) SampleSubscribeMessageRabbit() error {
-	opts := rabbitmq.DefaultSubscribeOptions("queueName")
+	opts := rabbitmq.DefaultSubscribeOptions("queueName", false)
 	subscriber, err := rabbitmq.NewSubscriber(s.ctx, s.rabbitmq, sampleSubscribeMessageRabbitHandler, opts)
 	if err != nil {
 		return err
@@ -89,8 +89,7 @@ func (s *Service) SampleMessageSenderRPCRabbit() error {
 }
 
 func (s *Service) SampleMessageReceiverRPCRabbit() error {
-	opts := rabbitmq.DefaultSubscribeOptions("queueNameRPC")
-	opts.WorkerCount = 1
+	opts := rabbitmq.DefaultSubscribeOptions("queueNameRPC", true)
 	subscriber, err := rabbitmq.NewSubscriber(s.ctx, s.rabbitmq, sampleMessageRabbitRPCHandler, opts)
 	if err != nil {
 		return err
