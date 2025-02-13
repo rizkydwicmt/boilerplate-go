@@ -19,12 +19,29 @@ import (
 )
 
 type JwtUser struct {
-	ID    string `json:"id"`
-	Is2FA bool   `json:"is_2fa"`
+	ID    int  `json:"id"`
+	Is2FA bool `json:"is_2fa"`
 }
 
 type data struct {
 	Data string `json:"data"`
+}
+
+var exemptedPaths = []string{
+	"/service/account/socioConnectCallback",
+	"/admin/generateMasterData",
+	"/admin/generateMasterDataNonTransaction",
+}
+
+var whitelistedPaths = map[string][]string{
+	http.MethodPost: {
+		"/api/v1/workflow-studio/duplicate/:id",
+		"/api/v1/form-studio/duplicate/:id",
+		// "/api/v1/auth/login",
+		//add more paths here
+	},
+	http.MethodPut:   {},
+	http.MethodPatch: {},
 }
 
 func EncryptMiddleware(rds redis.IRedis) gin.HandlerFunc {
@@ -109,7 +126,7 @@ func validateJwt(c *gin.Context, rds redis.IRedis, send func(r *_type.Response))
 		}
 
 		if user.Is2FA {
-			keyCache := os.Getenv("APP_TENANT") + ":" + user.ID + ":2fa"
+			keyCache := os.Getenv("APP_TENANT") + ":" + strconv.Itoa(user.ID) + ":2fa"
 			token, err := rds.Get(keyCache)
 			if err != nil {
 				send(helper.ParseResponse(&_type.Response{
@@ -133,8 +150,14 @@ func validateJwt(c *gin.Context, rds redis.IRedis, send func(r *_type.Response))
 }
 
 func validateRequestBody(c *gin.Context, send func(r *_type.Response)) error {
-	if c.Request.Method != http.MethodGet {
+	if c.Request.Method == http.MethodPost || c.Request.Method == http.MethodPut || c.Request.Method == http.MethodPatch {
 		var payload data
+
+		if isPathWhitelisted(c.FullPath(), c.Request.Method) {
+			c.Next()
+			return nil
+		}
+
 		if err := c.ShouldBind(&payload); err != nil {
 			send(helper.ParseResponse(&_type.Response{
 				Code:    http.StatusForbidden,
@@ -143,6 +166,7 @@ func validateRequestBody(c *gin.Context, send func(r *_type.Response)) error {
 			}))
 			return err
 		}
+
 		decryptedData, err := helper.DecryptAESCBC(payload.Data)
 		if err != nil {
 			send(helper.ParseResponse(&_type.Response{
@@ -152,6 +176,7 @@ func validateRequestBody(c *gin.Context, send func(r *_type.Response)) error {
 			}))
 			return err
 		}
+
 		var bodyData map[string]interface{}
 		if err := json.Unmarshal([]byte(decryptedData), &bodyData); err != nil {
 			send(helper.ParseResponse(&_type.Response{
@@ -161,6 +186,7 @@ func validateRequestBody(c *gin.Context, send func(r *_type.Response)) error {
 			}))
 			return err
 		}
+
 		c.Set("body", bodyData)
 		c.Request.Body = io.NopCloser(bytes.NewBuffer([]byte(decryptedData)))
 	}
@@ -168,14 +194,20 @@ func validateRequestBody(c *gin.Context, send func(r *_type.Response)) error {
 }
 
 func isPathExempted(path string) bool {
-	exemptedPaths := []string{
-		"/service/account/socioConnectCallback",
-		"/admin/generateMasterData",
-		"/admin/generateMasterDataNonTransaction",
-	}
 	for _, exemptedPath := range exemptedPaths {
 		if path == exemptedPath {
 			return true
+		}
+	}
+	return false
+}
+
+func isPathWhitelisted(path, method string) bool {
+	if paths, exists := whitelistedPaths[method]; exists {
+		for _, whitelistedPath := range paths {
+			if whitelistedPath == path {
+				return true
+			}
 		}
 	}
 	return false

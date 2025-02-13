@@ -25,6 +25,7 @@ func NewHandler(auth jwt.IJWTAuth) IHandler {
 
 func (h *Handler) Login(c *gin.Context) {
 	sample := map[string]interface{}{
+		"id":       1,
 		"username": "username",
 		"password": "password",
 	}
